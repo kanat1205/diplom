@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Цифровая грамотность / Digital Literacy</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(270deg, #4facfe, #00f2fe, #a18cd1, #fbc2eb);
+      background-size: 800% 800%;
+      animation: gradientMove 12s ease infinite;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      transition: background 0.5s ease;
+    }
+
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    body.game-over-flash { background: #c0392b !important; }
+
+    .game {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      width: 420px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      text-align: center;
+      transition: background-color 0.4s ease, transform 0.3s ease, opacity 0.3s ease;
+      position: relative;
+      opacity: 1;
+    }
+
+    /* --- ПРОГРЕСС-БАР ИГРЫ --- */
+    .game-progress-container {
+      width: 100%;
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .game-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4facfe, #00f2fe);
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* АНИМАЦИИ ПРИ ОТВЕТАХ */
+    .correct-flash { background-color: #d4edda !important; transform: scale(1.02); }
+    .wrong-flash { background-color: #f8d7da !important; animation: shake 0.3s ease-in-out; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+
+    .epic-game-over { animation: destroyCard 0.8s forwards ease-in-out; }
+    @keyframes destroyCard {
+      0% { transform: scale(1) rotate(0deg); }
+      100% { transform: translateY(100vh) scale(0.5) rotate(15deg); opacity: 0; }
+    }
+
+    .fade-in { animation: fadeInEffect 0.6s forwards ease-out; }
+    @keyframes fadeInEffect { 
+      0% { opacity: 0; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* ЭКРАН ПОБЕДЫ */
+    .victory-card {
+      background: linear-gradient(135deg, #ffe259, #ffa751) !important;
+      color: #333;
+      border: 3px solid #ffd700;
+      overflow: hidden;
+    }
+    .victory-trophy {
+      font-size: 64px;
+      margin-bottom: 10px;
+      animation: trophyPulse 1.5s infinite alternate ease-in-out;
+      display: inline-block;
+    }
+    @keyframes trophyPulse {
+      0% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(255,215,0,0.4)); }
+      100% { transform: scale(1.15); filter: drop-shadow(0 0 20px rgba(255,215,0,0.8)); }
+    }
+    .victory-score {
+      font-size: 32px;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      background: rgba(0,0,0,0.15);
+      padding: 10px;
+      border-radius: 10px;
+      margin: 15px auto;
+      display: inline-block;
+    }
+
+    /* КОНФЕТТИ */
+    .confetti {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: confettiFall 4s infinite linear;
+      opacity: 0.8;
+      pointer-events: none;
+    }
+    @keyframes confettiFall {
+      0% { transform: translateY(-20px) rotate(0deg); }
+      100% { transform: translateY(450px) rotate(360deg); opacity: 0; }
+    }
+
+    /* ЛЕТАЮЩИЕ ИНДИКАТОРЫ ОЧКОВ */
+    .floating-score {
+      position: absolute;
+      font-size: 24px;
+      font-weight: bold;
+      pointer-events: none;
+      animation: floatUp 0.8s ease-out forwards;
+      z-index: 10;
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-60px) scale(1.2); }
+    }
+
+    .info-box {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.4;
+      display: none;
+    }
+    .info-box.correct { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+    .info-box.wrong { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+
+    h2 { margin-bottom: 20px; }
+    #question { font-size: 18px; margin-bottom: 20px; min-height: 50px; }
+
+    input[type="text"] {
+      width: 90%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 2px solid #4facfe;
+      border-radius: 8px;
+      font-size: 16px;
+      text-align: center;
+      outline: none;
+    }
+
+    button {
+      display: block;
+      margin: 10px auto;
+      padding: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      background: #4facfe;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.1s ease, background 0.3s ease, opacity 0.3s ease;
+    }
+    button:hover { background: #007bff; transform: scale(1.02); }
+    
+    button:active {
+      transform: scaleX(1.08) scaleY(0.85);
+    }
+    
+    button.fade-out-btn {
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
+    button.lang-btn { background: #34495e; }
+    button.lang-btn:hover { background: #2c3e50; }
+    button.easy-btn { background: #2ecc71; }
+    button.easy-btn:hover { background: #27ae60; }
+    button.hard-btn { background: #e67e22; }
+    button.hard-btn:hover { background: #d35400; }
+    button.victory-btn { background: #2c3e50; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    button.victory-btn:hover { background: #1a252f; }
+    button.next-btn { background: #2ecc71; margin-top: 15px; font-weight: bold; display: none; }
+    button.next-btn:hover { background: #27ae60; }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    
+    .hearts span {
+      display: inline-block;
+      color: #e74c3c;
+      font-size: 20px;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .hearts.panic span {
+      animation: heartBeat 0.6s infinite alternate ease-in-out;
+    }
+    @keyframes heartBeat {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.3); }
+    }
+    .hearts span.broken {
+      animation: heartBreak 0.5s forwards ease-in;
+    }
+    @keyframes heartBreak {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.6) rotate(15deg); color: #7f8c8d; }
+      100% { transform: translateY(20px) scale(0); opacity: 0; }
+    }
+
+    #timerDisplay {
+      color: #2ecc71;
+      transition: color 0.3s ease;
+    }
+    #timerDisplay.timer-warning { color: #e67e22; }
+    #timerDisplay.timer-panic {
+      color: #e74c3c;
+      animation: timerPulse 0.5s infinite alternate ease-in-out;
+    }
+    @keyframes timerPulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.2); }
+    }
+
+    .timer-bar-container {
+      width: 100%;
+      height: 5px;
+      background: #eee;
+      border-radius: 3px;
+      margin-bottom: 15px;
+      overflow: hidden;
+    }
+    .timer-bar {
+      width: 100%;
+      height: 100%;
+      background: #2ecc71;
+      transition: width 1s linear, background-color 0.5s ease;
+    }
+  </style>
+</head>
+<body>
+
+<div class="game" id="langScreen">
+  <h2>Цифровая грамотность</h2>
+  <p>Введите ваш никнейм / Enter your nickname:</p>
+  <input type="text" id="nicknameInput" placeholder="Player" maxlength="15">
+  <p>Выберите язык / Select Language:</p>
+  <button class="lang-btn" onclick="selectLanguage('ru')">Русский</button>
+  <button class="lang-btn" onclick="selectLanguage('en')">English</button>
+</div>
+
+<div class="game" id="startScreen" style="display:none;">
+  <h2 id="menuTitle">Цифровая грамотность</h2>
+  <p id="menuSubtitle">Выбери уровень сложности:</p>
+  <button class="easy-btn" id="easyBtn" onclick="startGame('easy')">Легкий уровень (15 вопросов)</button>
+  <button class="hard-btn" id="hardBtn" onclick="startGame('hard')">Сложный уровень (8 вопросов)</button>
+</div>
+
+<div class="game" id="gameScreen" style="display:none;">
+  <div class="game-progress-container">
+    <div id="gameProgress" class="game-progress-bar"></div>
+  </div>
+
+  <div class="status-bar">
+    <div id="scoreDisplay" style="position: relative;">Очки: 0</div>
+    <div id="timerDisplay">⏱ 30s</div>
+    <div id="livesDisplay" class="hearts"></div>
+  </div>
+  <div class="timer-bar-container">
+    <div id="timerBar" class="timer-bar"></div>
+  </div>
+  <h2 id="gameTitle">Вопрос</h2>
+  <p id="question"></p>
+
+  <button onclick="checkAnswer(0, this)" id="a0"></button>
+  <button onclick="checkAnswer(1, this)" id="a1"></button>
+  <button onclick="checkAnswer(2, this)" id="a2"></button>
+
+  <div id="infoBox" class="info-box"></div>
+  <button id="nextBtn" class="next-btn" onclick="goToNextQuestion()">Далее →</button>
+</div>
+
+<div class="game" id="endScreen" style="display:none;">
+  <div id="victoryIcon" class="victory-trophy" style="display:none;">🏆</div>
+  <h2 id="endTitle">Результат игры</h2>
+  <div id="scoreBox"></div>
+  <p id="endText"></p>
+  <button id="replayBtn" onclick="resetGame()">Играть снова</button>
+</div>
+
+<script>
+// --- БЕЗОПАСНЫЙ СИНТЕЗАТОР ЗВУКОВЫХ ЭФФЕКТОВ ---
+const SoundEffects = {
+  ctx: null,
+
+  init() {
+    try {
+      if (!this.ctx) {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      // Если контекст "спит", пробуем его разбудить кликом
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+    } catch (e) {
+      console.log("AudioContext не поддерживается или заблокирован:", e);
+    }
+  },
+
+  playClick() {
+    this.init();
+    if (!this.ctx || this.ctx.state === 'suspended') return; // Защита от зависания
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.05);
+    } catch(err) {}
+  },
+
+  playCorrect() {
+    this.init();
+    if (!this.ctx || this.ctx.state === 'suspended') return;
+    try {
+      const now = this.ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99]; 
+      notes.forEach((freq, index) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + index * 0.08);
+        gain.gain.setValueAtTime(0.15, now + index * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + index * 0.08 + 0.3);
+
+        osc.start(now + index * 0.08);
+        osc.stop(now + index * 0.08 + 0.3);
+      });
+    } catch(err) {}
+  },
+
+  playWrong() {
+    this.init();
+    if (!this.ctx || this.ctx.state === 'suspended') return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(70, this.ctx.currentTime + 0.4);
+      
+      gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.4);
+    } catch(err) {}
+  },
+
+  playGameOver() {
+    this.init();
+    if (!this.ctx || this.ctx.state === 'suspended') return;
+    try {
+      const now = this.ctx.currentTime;
+      const notes = [300, 260, 220, 180];
+      notes.forEach((freq, index) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, now + index * 0.15);
+        gain.gain.setValueAtTime(0.2, now + index * 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + index * 0.15 + 0.4);
+
+        osc.start(now + index * 0.15);
+        osc.stop(now + index * 0.15 + 0.4);
+      });
+    } catch(err) {}
+  }
+};
+
+const uiTexts = {
+  ru: {
+    title: "Цифровая грамотность", subtitle: "Выбери уровень сложности:",
+    easy: "Легкий уровень (15 вопросов)", hard: "Сложный уровень (8 вопросов)", gameTitle: "Вопрос ",
+    correctAlert: "<b>Правильно! +5 очков.</b><br>", wrongAlert: "<b>Неправильно! -5 очков, потеряна жизнь.</b><br>",
+    timeOutAlert: "<b>Время вышло! -5 очков, потеряна жизнь.</b><br>",
+    resultTitle: "Поздравляем с победой! 🎉", resultText: ", отличный результат! Вопросов пройдено: ",
+    gameOver: ", игра окончена! Закончились жизни 😢", replay: "Играть снова", score: "Очки: ", nameAlert: "Пожалуйста, введите никнейм!", of: " из ", next: "Далее →"
+  },
+  en: {
+    title: "Digital Literacy", subtitle: "Select difficulty level:",
+    easy: "Easy Level (15 questions)", hard: "Hard Level (8 questions)", gameTitle: "Question ",
+    correctAlert: "<b>Correct! +5 points.</b><br>", wrongAlert: "<b>Incorrect! -5 points, life lost.</b><br>",
+    timeOutAlert: "<b>Time's up! -5 points, life lost.</b><br>",
+    resultTitle: "Victory! Congratulations 🎉", resultText: ", great job! Questions answered: ",
+    gameOver: ", game over! You lost all your lives 😢", replay: "Play again", score: "Score: ", nameAlert: "Please enter a nickname!", of: " of " , next: "Next →"
+  }
+};
+
+const questionsData = {
+  ru: {
+    easy: [
+      { q: "Что такое фишинг?", a: ["Вид компьютерного вируса", "Обман для кражи личных данных", "Браузерная мини-игра"], correct: 1, info: "Фишинг — это уловка мошенников для кражи паролей через фейковые сайты." },
+      { q: "Какой пароль из предложенных самый надежный?", a: ["123456789", "my_password123", "X$7mP!q9_Z"], correct: 2, info: "Надежный пароль содержит разные регистры букв, цифры и спецсимволы." },
+      { q: "Можно ли скачивать файлы с неизвестных сайтов?", a: ["Да, если очень нужно", "Нет, это большой риск", "Можно, но только картинки"], correct: 1, info: "Скачивание файлов из непроверенных источников грозит заражением вирусами." },
+      { q: "Что нужно делать с подозрительными письмами на почте?", a: ["Сразу открыть и прочесть", "Удалить или проигнорировать", "Переслать всем друзьям"], correct: 1, info: "Подозрительные письма могут содержать опасные ссылки и вирусы." },
+      { q: "Можно ли делиться своим паролем с лучшим другом?", a: ["Да, мы доверяем друг другу", "Нет, пароль должен знать только ты", "Только если друг сильно просит"], correct: 1, info: "Пароль — строго конфиденциальная личная информация." },
+      { q: "Что такое спам?", a: ["Полезная рассылка новостей", "Массовая нежелательная реклама", "Антивирусная программа"], correct: 1, info: "Спам — это массовая рассылка коммерческой и иной рекламы без согласия получателя." },
+      { q: "Какая информация безопасна для публикации в соцсетях?", a: ["Домашний адрес и телефон", "Фотография вашего кота", "Фото билетов на самолет"], correct: 1, info: "Личные данные и билеты публикуют мошенникам на радость. А котики — это безопасно." },
+      { q: "Что делать, если компьютер заблокировался и требует выкуп?", a: ["Заплатить мошенникам", "Обратиться к специалисту", "Разбить монитор"], correct: 1, info: "Выплата выкупа не гарантирует разблокировку. Нужен специалист или антивирус." },
+      { q: "Для чего нужен антивирус?", a: ["Чтобы компьютер быстрее думал", "Для защиты от вредоносных программ", "Чтобы скачивать платные игры"], correct: 1, info: "Антивирус находит, блокирует и удаляет вредоносный код." },
+      { q: "Что такое кибербуллинг?", a: ["Травля и оскорбления в интернете", "Быстрый набор текста на скорость", "Покупка вещей в онлайн-играх"], correct: 0, info: "Кибербуллинг — это преднамеренное оскорбление и издевательство в сети." },
+      { q: "Безопасно ли покупать товары в интернет-магазине через общественный Wi-Fi?", a: ["Да, Wi-Fi везде одинаковый", "Нет, данные карты могут перехватить", "Да, если покупка недорогая"], correct: 1, info: "Открытые общественные сети не шифруют данные, они уязвимы для перехвата." },
+      { q: "Что означает 'цифровой след'?", a: ["Информация, которую вы оставляете в сети", "Рисунок пальцем на экране планшета", "Количество шагов в фитнес-трекере"], correct: 0, info: "Всё, что вы лайкаете, постите и ищете, формирует ваш цифровой след." },
+      { q: "Как расшифровывается ПК?", a: ["Программный Комплекс", "Персональный Компьютер", "Правильный Контент"], correct: 1, info: "ПК традиционно расшифровывается как Персональный Компьютер." },
+      { q: "Что из этого является браузером?", a: ["Google Chrome", "Adobe Photoshop", "Windows 11"], correct: 0, info: "Chrome — это программа для просмотра веб-страниц (браузер)." },
+      { q: "Где лучше всего хранить важные резервные копии файлов?", a: ["В корзине на рабочем столе", "На флешке или в облачном хранилище", "Написать их текст на бумаге"], correct: 1, info: "Облака и внешние накопители спасут файлы, если компьютер сломается." }
+    ],
+    hard: [
+      { q: "Что делает двухфакторная аутентификация (2FA)?", a: ["Ускоряет загрузку сайтов", "Требует дополнительный код при входе", "Очищает кэш браузера"], correct: 1, info: "2FA защищает аккаунт, даже если злоумышленник узнал ваш пароль." },
+      { q: "Какой протокол шифрует трафик в браузере?", a: ["HTTP", "HTTPS", "FTP"], correct: 1, info: "HTTPS (буква S — Secure) обеспечивает безопасное зашифрованное соединение." },
+      { q: "Что такое социальная инженерия?", a: ["Психологический обман для кражи данных", "Настройка таргетированной рекламы", "Создание роботов-помощников"], correct: 0, info: "Это метод, основанный на манипуляции человеческими слабостями и доверием." },
+      { q: "Что скрывается под термином дипфейк (Deepfake)?", a: ["Очень старая веб-страница", "Подделка видео/аудио с помощью ИИ", "Глубокая очистка системы от вирусов"], correct: 1, info: "Дипфейки используют нейросети для замены лиц и голосов на медиафайлах." },
+      { q: "Что такое Ransomware (вирус-вымогатель)?", a: ["Программа для показа рекламы", "Вирус, который шифрует файлы и требует деньги", "Утилита, ускоряющая видеокарту"], correct: 1, info: "Оно блокирует доступ к файлам, требуя выкуп за ключ дешифрования." },
+      { q: "Какая атака называется MITM (Man-in-the-Middle)?", a: ["Взлом через подбор паролей", "Перехват данных между пользователем и сайтом", "Физическая кража ноутбука"], correct: 1, info: "При атаке 'Человек посередине' хакер тайно ретранслирует и изменяет связь сторон." },
+      { q: "Что такое VPN?", a: ["Виртуальная частная сеть для защиты трафика", "Программа для создания сайтов", "Вирусная база данных"], correct: 0, info: "VPN шифрует твое интернет-соединение и скрывает твой реальный IP-адрес." },
+      { q: "Для чего используется менеджер паролей?", a: ["Чтобы делиться паролями с коллегами", "Для генерации и безопасного хранения паролей", "Чтобы взламывать чужие аккаунты"], correct: 1, info: "Менеджер надежно шифрует базу ваших сложных паролей под одним мастер-паролем." }
+    ]
+  },
+  en: {
+    easy: [
+      { q: "What is phishing?", a: ["A type of computer virus", "Scam to steal private data", "A browser mini-game"], correct: 1, info: "Phishing is a trick scammers use to steal passwords via fake sites." },
+      { q: "Which password is the most secure?", a: ["1234565789", "my_password123", "X$7mP!q9_Z"], correct: 2, info: "A strong password contains mixed case letters, numbers, and symbols." },
+      { q: "Is it safe to download files from unknown sites?", a: ["Yes, if you really need to", "No, it is a high risk", "Yes, but only images"], correct: 1, info: "Downloading files from untrusted sources risks malware infection." },
+      { q: "What should you do with suspicious emails?", a: ["Open and read them immediately", "Delete or ignore them", "Forward them to friends"], correct: 1, info: "Suspicious emails can contain dangerous links and viruses." },
+      { q: "Should you share your password with your best friend?", a: ["Yes, we trust each other", "No, only you should know it", "Only if they ask nicely"], correct: 1, info: "A password is strictly confidential personal information." },
+      { q: "What is spam?", a: ["A useful news subscription", "Mass unsolicited advertising", "An antivirus program"], correct: 1, info: "Spam is mass distribution of advertising without the recipient's consent." },
+      { q: "What information is safe to post on social media?", a: ["Home address and phone number", "A photo of your cat", "A photo of plane tickets"], correct: 1, info: "Personal data and tickets help scammers. Cats are perfectly safe." },
+      { q: "What if your PC gets locked and demands a ransom?", a: ["Pay the scammers", "Consult a specialist", "Smash the monitor"], correct: 1, info: "Paying does not guarantee unlock. You need a specialist or antivirus." },
+      { q: "What is an antivirus for?", a: ["To make your PC run faster", "To protect against malware", "To download paid games"], correct: 1, info: "Antivirus detects, blocks, and removes malicious code." },
+      { q: "What is cyberbullying?", a: ["Online harassment and insults", "A speed typing contest", "Buying items in online games"], correct: 0, info: "Cyberbullying is intentional online harassment or abuse." },
+      { q: "Is it safe to buy online via public Wi-Fi?", a: ["Yes, Wi-Fi is the same everywhere", "No, card data can be intercepted", "Yes, if it's cheap"], correct: 1, info: "Open public networks do not encrypt data, leaving it vulnerable." },
+      { q: "What does 'digital footprint' mean?", a: ["Information you leave online", "Drawing with your finger on a screen", "Step count on a fitness tracker"], correct: 0, info: "Everything you like, post, and search forms your digital footprint." },
+      { q: "What does PC stand for?", a: ["Program Complex", "Personal Computer", "Perfect Content"], correct: 1, info: "PC traditionally stands for Personal Computer." },
+      { q: "Which of these is a web browser?", a: ["Google Chrome", "Adobe Photoshop", "Windows 11"], correct: 0, info: "Chrome is a software program used to view web pages." },
+      { q: "Where is the best place to keep file backups?", a: ["In the Desktop recycle bin", "On a flash drive or cloud storage", "Written on paper"], correct: 1, info: "Clouds and external drives save files if your computer crashes." }
+    ],
+    hard: [
+      { q: "What does Two-Factor Authentication (2FA) do?", a: ["Speeds up website loading", "Requires an extra code to log in", "Clears browser cache"], correct: 1, info: "2FA protects your account even if someone finds out your password." },
+      { q: "Which protocol encrypts browser traffic?", a: ["HTTP", "HTTPS", "FTP"], correct: 1, info: "HTTPS (S for Secure) provides a safe, encrypted connection." },
+      { q: "What is social engineering?", a: ["Psychological scam to steal data", "Setting up targeted ads", "Building robot helpers"], correct: 0, info: "It is a method based on manipulating human weakness and trust." },
+      { q: "What is hidden under the term Deepfake?", a: ["A very old web page", "AI-based video/audio forgery", "Deep system virus cleaning"], correct: 1, info: "Deepfakes use neural networks to replace faces and voices in media." },
+      { q: "What is Ransomware?", a: ["An ad-showing program", "A virus encrypting files for money", "A GPU accelerating utility"], correct: 1, info: "It blocks access to files, demanding ransom for the decryption key." },
+      { q: "What attack is called MITM (Man-in-the-Middle)?", a: ["Password guessing hack", "Data interception between user and site", "Physical laptop theft"], correct: 1, info: "In a MITM attack, a hacker secretly intercepts communication." },
+      { q: "What is a VPN?", a: ["A virtual private network to protect traffic", "A website builder software", "A virus database"], correct: 0, info: "A VPN encrypts your connection and hides your real IP address." },
+      { q: "What is a password manager used for?", a: ["To share passwords with peers", "To generate and securely store passwords", "To hack other accounts"], correct: 1, info: "A manager encrypts your complex passwords under one master key." }
+    ]
+  }
+};
+
+let currentLanguage = 'ru';
+let questions = [];
+let current = 0;
+let score = 0;
+let lives = 3;
+let nickname = "Player";
+
+let timeLeft = 30;
+let timerId = null;
+let canClick = true;
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("langScreen").style.display = "block";
+});
+
+function selectLanguage(lang) {
+  const inputVal = document.getElementById("nicknameInput").value.trim();
+  if (!inputVal) {
+    alert(uiTexts[lang].nameAlert);
+    return;
+  }
+  
+  nickname = inputVal;
+  currentLanguage = lang;
+
+  document.getElementById("menuTitle").innerText = uiTexts[lang].title;
+  document.getElementById("menuSubtitle").innerText = uiTexts[lang].subtitle;
+  document.getElementById("easyBtn").innerText = uiTexts[lang].easy;
+  document.getElementById("hardBtn").innerText = uiTexts[lang].hard;
+
+  document.getElementById("langScreen").style.display = "none";
+  document.getElementById("startScreen").style.display = "block";
+  
+  // Инициализируем аудио именно здесь (после гарантированного первого клика юзера)
+  SoundEffects.playClick();
+}
+
+function startGame(level) {
+  SoundEffects.playClick();
+  questions = questionsData[currentLanguage][level];
+  current = 0;
+  score = 0;
+  lives = 3;
+  canClick = true;
+  
+  const gameCard = document.getElementById("gameScreen");
+  gameCard.className = "game";
+  document.body.className = "";
+  
+  const container = document.getElementById("livesDisplay");
+  container.className = "hearts";
+  container.innerHTML = "<span>♥</span><span>♥</span><span>♥</span>";
+
+  updateStatusBar();
+  document.getElementById("startScreen").style.display = "none";
+  document.getElementById("endScreen").style.display = "none";
+  gameCard.style.display = "block";
+  loadQuestion();
+}
+
+function updateStatusBar() {
+  document.getElementById("scoreDisplay").innerText = uiTexts[currentLanguage].score + score;
+}
+
+function loadQuestion() {
+  const lang = currentLanguage;
+  document.getElementById("gameTitle").innerText = uiTexts[lang].gameTitle + (current + 1) + uiTexts[lang].of + questions.length;
+  document.getElementById("nextBtn").innerText = uiTexts[lang].next;
+
+  document.getElementById("infoBox").style.display = "none";
+  document.getElementById("nextBtn").style.display = "none";
+  canClick = true;
+
+  for(let i=0; i<3; i++) {
+    const btn = document.getElementById("a" + i);
+    btn.className = "";
+    btn.style.backgroundColor = "#4facfe";
+  }
+
+  const progressPercent = (current / questions.length) * 100;
+  document.getElementById("gameProgress").style.width = progressPercent + "%";
+
+  document.getElementById("question").innerText = questions[current].q;
+  document.getElementById("a0").innerText = questions[current].a[0];
+  document.getElementById("a1").innerText = questions[current].a[1];
+  document.getElementById("a2").innerText = questions[current].a[2];
+  
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timerId);
+  timeLeft = 30;
+  
+  const display = document.getElementById("timerDisplay");
+  const bar = document.getElementById("timerBar");
+  
+  display.innerText = "⏱ " + timeLeft + "s";
+  display.className = ""; 
+  bar.style.width = "100%";
+  bar.style.backgroundColor = "#2ecc71";
+
+  timerId = setInterval(() => {
+    timeLeft--;
+    display.innerText = "⏱ " + timeLeft + "s";
+    bar.style.width = (timeLeft / 30 * 100) + "%";
+
+    if (timeLeft <= 15 && timeLeft > 5) {
+      display.className = "timer-warning";
+      bar.style.backgroundColor = "#e67e22";
+    } else if (timeLeft <= 5) {
+      display.className = "timer-panic";
+      bar.style.backgroundColor = "#e74c3c";
+    }
+
+    if (timeLeft <= 0) {
+      clearInterval(timerId);
+      handleTimeOut();
+    }
+  }, 1000);
+}
+
+function spawnFloatingText(text, isPositive) {
+  const container = document.getElementById("scoreDisplay");
+  const el = document.createElement("div");
+  el.className = "floating-score";
+  el.innerText = text;
+  el.style.color = isPositive ? "#2ecc71" : "#e74c3c";
+  el.style.left = "40px";
+  el.style.top = "-10px";
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+function removeHeartVisual() {
+  const hearts = document.querySelectorAll("#livesDisplay span:not(.broken)");
+  if(hearts.length > 0) {
+    const lastHeart = hearts[hearts.length - 1];
+    lastHeart.classList.add("broken");
+  }
+  const container = document.getElementById("livesDisplay");
+  if(hearts.length === 2) {
+    container.classList.add("panic");
+  } else if (hearts.length <= 1) {
+    container.classList.remove("panic");
+  }
+}
+
+function handleTimeOut() {
+  if (!canClick) return;
+  canClick = false;
+  
+  SoundEffects.playWrong();
+  const lang = currentLanguage;
+  const gameCard = document.getElementById("gameScreen");
+  const infoBox = document.getElementById("infoBox");
+  
+  score -= 5;
+  lives--;
+  spawnFloatingText("-5", false);
+  removeHeartVisual();
+  gameCard.classList.add("wrong-flash");
+  updateStatusBar();
+
+  for(let i = 0; i < 3; i++) {
+    document.getElementById("a" + i).classList.add("fade-out-btn");
+  }
+
+  infoBox.className = "info-box wrong";
+  infoBox.innerHTML = uiTexts[lang].timeOutAlert + questions[current].info;
+  infoBox.style.display = "block";
+  
+  document.getElementById("nextBtn").style.display = "block";
+}
+
+function checkAnswer(index, clickedButton) {
+  if (!canClick) return;
+  canClick = false;
+  
+  clearInterval(timerId);
+  const lang = currentLanguage;
+  const gameCard = document.getElementById("gameScreen");
+  const infoBox = document.getElementById("infoBox");
+
+  for(let i = 0; i < 3; i++) {
+    const btn = document.getElementById("a" + i);
+    if(btn !== clickedButton) {
+      btn.classList.add("fade-out-btn");
+    }
+  }
+
+  if (index === questions[current].correct) {
+    SoundEffects.playCorrect();
+    score += 5;
+    spawnFloatingText("+5", true);
+    clickedButton.style.backgroundColor = "#2ecc71";
+    gameCard.classList.add("correct-flash");
+    updateStatusBar();
+    
+    infoBox.className = "info-box correct";
+    infoBox.innerHTML = uiTexts[lang].correctAlert + questions[current].info;
+  } else {
+    SoundEffects.playWrong();
+    score -= 5;
+    lives--;
+    spawnFloatingText("-5", false);
+    removeHeartVisual();
+    clickedButton.style.backgroundColor = "#e74c3c";
+    gameCard.classList.add("wrong-flash");
+    updateStatusBar();
+
+    infoBox.className = "info-box wrong";
+    infoBox.innerHTML = uiTexts[lang].wrongAlert + questions[current].info;
+  }
+
+  infoBox.style.display = "block";
+  document.getElementById("nextBtn").style.display = "block";
+}
+
+function goToNextQuestion() {
+  SoundEffects.playClick();
+  const gameCard = document.getElementById("gameScreen");
+  gameCard.classList.remove("correct-flash", "wrong-flash");
+
+  if (lives <= 0) {
+    triggerEpicGameOver();
+  } else {
+    current++;
+    if (current < questions.length) {
+      loadQuestion();
+    } else {
+      endGame(false);
+    }
+  }
+}
+
+function triggerEpicGameOver() {
+  clearInterval(timerId);
+  SoundEffects.playGameOver();
+  const gameCard = document.getElementById("gameScreen");
+  
+  gameCard.classList.add("epic-game-over");
+  document.body.classList.add("game-over-flash");
+
+  setTimeout(() => {
+    endGame(true);
+  }, 800);
+}
+
+function endGame(isGameOver) {
+  clearInterval(timerId);
+  const lang = currentLanguage;
+  const endCard = document.getElementById("endScreen");
+  const trophy = document.getElementById("victoryIcon");
+  const scoreBox = document.getElementById("scoreBox");
+  const replayBtn = document.getElementById("replayBtn");
+  
+  document.querySelectorAll('.confetti').forEach(el => el.remove());
+
+  if (isGameOver) {
+    endCard.classList.remove("victory-card");
+    replayBtn.classList.remove("victory-btn");
+    trophy.style.display = "none";
+    
+    document.getElementById("endTitle").innerText = nickname + uiTexts[lang].gameOver;
+    scoreBox.innerHTML = `<span style="font-size: 20px; font-weight:bold; color:#c0392b;">${uiTexts[lang].score} ${score}</span>`;
+    document.getElementById("endText").innerText = "";
+  } else {
+    document.getElementById("gameProgress").style.width = "100%";
+
+    endCard.classList.add("victory-card");
+    replayBtn.classList.add("victory-btn");
+    trophy.style.display = "inline-block";
+    
+    document.getElementById("endTitle").innerText = uiTexts[lang].resultTitle;
+    scoreBox.innerHTML = `<div class="victory-score">${uiTexts[lang].score} ${score} 🔥</div>`;
+    document.getElementById("endText").innerHTML = `<b>${nickname}</b>${uiTexts[lang].resultText} <b>${current}</b>`;
+    
+    for (let i = 0; i < 30; i++) {
+      createConfetti(endCard);
+    }
+  }
+
+  document.getElementById("replayBtn").innerText = uiTexts[lang].replay;
+  document.getElementById("gameScreen").style.display = "none";
+  
+  endCard.classList.add("fade-in");
+  endCard.style.display = "block";
+}
+
+function createConfetti(target) {
+  const confetti = document.createElement('div');
+  confetti.classList.add('confetti');
+  
+  const colors = ['#fe104d', '#2ecc71', '#f1c40f', '#3498db', '#e67e22', '#fff'];
+  confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+  confetti.style.left = Math.random() * 100 + '%';
+  confetti.style.top = '-10px';
+  confetti.style.animationDelay = Math.random() * 3 + 's';
+  confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+  
+  target.appendChild(confetti);
+}
+
+function resetGame() {
+  SoundEffects.playClick();
+  document.body.className = "";
+  document.getElementById("gameScreen").className = "game";
+  
+  const endCard = document.getElementById("endScreen");
+  endCard.classList.remove("fade-in", "victory-card");
+  
+  document.getElementById("endScreen").style.display = "none";
+  document.getElementById("startScreen").style.display = "block";
+}
+</script>
+
+</body>
+</html>
